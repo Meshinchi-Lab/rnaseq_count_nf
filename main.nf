@@ -7,6 +7,7 @@ include { sra_fastqs } from './subworkflows/local/sra_fastqs.nf'
 //QC modules
 include { FASTQC } from './modules/nf-core/fastqc/main.nf'
 include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
+include { SAMTOOLS_FLAGSTAT } from './modules/nf-core/samtools/flagstat/main.nf'
 include { MULTIQC } from './modules/nf-core/multiqc/main.nf'
 include { RSEQC_SPLITBAM } from './modules/local/rseqc/splitbam.nf'
 include { RSEQC_READDISTRIBUTION } from './modules/nf-core/rseqc/readdistribution/main.nf'
@@ -128,7 +129,6 @@ workflow rnaseq_count {
     // QC 
     //
 
-
     // FASTQC on the trimmed reads
     if ( params.trim ) {
         FASTQC_TRIM(TRIMGALORE.out.reads)
@@ -140,10 +140,14 @@ workflow rnaseq_count {
     STAR_ALIGN.out.bam
         .cross(SAMTOOLS_INDEX.out.bai) { it -> it[0].id }
         .map { meta -> [ meta[0][0], meta[0][1], meta[1][1] ] }
-        .set { rseqc_ch }
-    RSEQC_SPLITBAM(rseqc_ch, genome_refs.out.rRNA_bed)
-    RSEQC_READDISTRIBUTION(rseqc_ch, genome_refs.out.ref_gene_model)
-    // RSEQC_TIN(rseqc_ch, genome_refs.out.ref_gene_model)
+        .set { bam_bai_ch }
+    RSEQC_SPLITBAM(bam_bai_ch, genome_refs.out.rRNA_bed)
+    RSEQC_READDISTRIBUTION(bam_bai_ch, genome_refs.out.ref_gene_model)
+    // RSEQC_TIN(bam_bai_ch, genome_refs.out.ref_gene_model)
+
+    // alignments flagstat QC
+    SAMTOOLS_FLAGSTAT(bam_bai_ch)
+
 
     //
     //
@@ -179,6 +183,7 @@ workflow rnaseq_count {
             .concat(STAR_ALIGN.out.read_counts)
             .concat(SUBREAD_FEATURECOUNTS.out.summary)
             .concat(PICARD_MARKDUPLICATES.out.metrics)
+            .concat(SAMTOOLS_FLAGSTAT.out.flagstat)
             .concat(RSEQC_READDISTRIBUTION.out.txt)
             .map { row -> row[1]}
             .collect()

@@ -6,7 +6,7 @@ NXF_CONFIG=./nextflow.config
 # Options: hyperqueue, docker
 NXF_PROFILE='hyperqueue'
 # Options:  rnaseq_count, prep_genome, or sra_download
-NXF_ENTRY='sra_download'
+NXF_ENTRY='rnaseq_count'
 # The output prefix on filenames for reports/logs
 REPORT=${1:-"rnaseq_star_counts"}
 
